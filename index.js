@@ -13,7 +13,7 @@ function wrap(fn) {
 	// Function takes 2 arguments
 	if (fn.length === 2) {
 		return function (req, res) {
-			const start = Date.now();	
+			const start = Date.now();
 			res.once('finish', () => profiles.emit('middleware', {
 				req,
 				name: fn.name,
@@ -44,15 +44,13 @@ app.use(wrap(function (req, res, next) {
 }));
 
 const profiles = new EventEmitter();
- 
+
 profiles.on('route', ({ req, elapsedMS }) => {
-console.log('Route')
-  console.log(req.method, req.url, `${elapsedMS}ms`);
+	console.log(req.method, req.url, `${elapsedMS}ms`);
 });
 
 profiles.on('middleware', ({ req, name, elapsedMS }) => {
-	console.log('MiddleWare')
-  console.log(req.method, req.url, ':', name, `${elapsedMS}ms`);
+	console.log(req.method, req.url, ':', name, `${elapsedMS}ms`);
 });
 
 
@@ -60,7 +58,9 @@ profiles.on('middleware', ({ req, name, elapsedMS }) => {
 
 const DB = require("./Database.js");
 
+//Custom functions
 const navigator = require('./Navigator.js')
+const User = require("./User.js")
 DB.connect();
 
 var allowCrossDomain = function (req, res, next) {
@@ -86,71 +86,22 @@ app.use(cookieParser())
 app.engine('html', engine.mustache);
 app.set('view engine', 'html');
 app.use(allowCrossDomain);
-app.get('/', function (req, res) {
-	navigator.CheckLogin(req, res, 'Dashboard')
-})
-
-app.post('/', async function (req, res) {
-	res.send('POST hello world')
-})
+app.route('/')
+	.get(function (req, res) {
+		navigator.CheckLogin(req, res, 'Dashboard')
+	})
+	.post(async function (req, res) {
+		res.send('POST hello world')
+	})
 
 app.post('/new_user', async function (req, res) {
-	console.log("Post new user")
-	console.log(req.body)
-	var voornaam = req.body.voornaam;
-	var achternaam = req.body.achternaam;
-	var email = req.body.email;
-	var gebruikersnaam = req.body.gebruikersnaam;
-	var paswoord = req.body.paswoord;
-	var table = "gebruikers";
-
-	bcrypt.hash(paswoord, null, null, function (err, hash) {
-		if (err) {
-			res.sendStatus(500);
-			res.end();
-		} else {
-			DB.connect()
-			DB.insert(`INSERT INTO ${table} (voornaam,achternaam,email,gebruikersnaam,paswoord) VALUES ('${voornaam}', '${achternaam}', '${email}', '${gebruikersnaam}', '${hash}')`)
-			DB.disconnect()
-			res.sendStatus(200);
-			res.end();
-		}
-	})
-	console.log(voornaam, achternaam, email, gebruikersnaam, paswoord)
+	User.Register(req, res);
 })
 
-Object.prototype.parseSqlResult = function () {
-	return JSON.parse(JSON.stringify(this[0]))
-}
+
 
 app.post('/login', async function (req, res) {
-	console.log("LOGIN ATTEMPT")
-	var gebruikersnaam = req.body.gebruikersnaam;
-	DB.connect().then(
-		await DB.getData(`SELECT * from gebruikers where Gebruikersnaam = '${gebruikersnaam}' limit 1`).then(data => {
-			let result = data.parseSqlResult()
-			if (bcrypt.compareSync(req.body.paswoord, result.Paswoord)) {
-				try {
-					res.cookie('Login', req.body.gebruikersnaam)
-					console.log("SUCCES")
-					res.status(200).json({ "Status": "OK" })
-
-
-					//res.send("SUCCES")
-					//res.redirect("dashboard.html")
-					res.end()
-					DB.disconnect().catch()
-				} catch (err) {
-					console.log(err)
-				}
-			} else {
-				console.log("FAILURE")
-				res.status(403).json({ "Reason": "INCORRECT PASSWORD" })
-				res.end()
-				DB.disconnect().catch()
-			}
-		}).catch()
-	).catch()
+	User.Login(req, res);
 })
 
 

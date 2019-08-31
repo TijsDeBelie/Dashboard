@@ -1,9 +1,12 @@
+const { EventEmitter } = require('events');
+const Navigation = new EventEmitter();
 var stack = [];
 
 function CheckLogin(req, res, NavigateIfTrue, NavigateIfFalse='Login') {
     if(req.cookies['Login'] != null){
         res.render(NavigateIfTrue)
-        stack.push(NavigateIfTrue)
+      
+        Navigation.emit(NavigateIfTrue)
 	}else{
         res.render(NavigateIfFalse)
         stack.push(NavigateIfFalse)
