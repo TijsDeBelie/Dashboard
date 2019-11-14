@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt-nodejs')
 const DB = require("./Database.js");
 
 
-function register(req, res) {
+function Register(req, res) {
     console.log("Post new user")
     console.log(req.body)
     var voornaam = req.body.voornaam;
@@ -32,7 +32,7 @@ Object.prototype.parseSqlResult = function () {
     return JSON.parse(JSON.stringify(this[0]))
 }
 
-async function login(req, res) {
+async function Login(req, res) {
     console.log("LOGIN ATTEMPT")
     var gebruikersnaam = req.body.gebruikersnaam;
     DB.connect().then(
@@ -61,13 +61,53 @@ async function login(req, res) {
         }).catch()
     ).catch()
 }
-function logout() {
+function Logout(req, res) {
+
+    res.clearCookie('Login');
+    res.clearCookie('Token');
+    res.redirect("/");
+}
+function Update() {
+
+
+}
+function Delete() {
+
 
 }
 
-module.exports = {
-    "Logout": logout,
-    "Login": login,
-    "Register": register
+async function SaveUserInfo(id, username, token) {
+    return new Promise((resolve, reject) => {
+        var table = "gebruikers";
+        DB.connect()
+            .then(DB.insert(`INSERT INTO ${table} (user_id,username,token) VALUES ('${id}', '${username}', '${token}')`)
+                .then(s => {
+                    DB.disconnect()
+                        .then(resolve(s))
+                        .catch(e => reject(e))
+                })
+                .catch(e => reject(e)))
+            .catch(e => reject(e));
+        console.log(id, username, token)
+    });
+}
 
+async function GetUserInfo(id) {
+    return new Promise((resolve, reject) => {
+        DB.connect()
+            .then(DB.getData(`select * from gebruikers where user_id = '${id}' limit 1`)
+                .then(s => resolve(s[0]))
+                .catch(e => reject(e)))
+            .catch(e => reject(e));
+    });
+}
+
+module.exports = {
+    "Logout": Logout,
+    "Login": Login,
+    "Register": Register,
+    "Update": Update,
+    "Delete": Delete,
+    "SaveUserInfo": SaveUserInfo,
+    "GetUserInfo": GetUserInfo
 }

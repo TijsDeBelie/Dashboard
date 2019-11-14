@@ -18,11 +18,15 @@ function connect() {
 }
 async function disconnect() {
 	return new Promise(function (resolve, reject) {
-		con.end(async function (err) {
-			if (err) reject(err)
-			resolve(true)
-			console.log(`Disconnected`)
-		});
+		try {
+			con.end(async function (err) {
+				if (err) reject(err)
+				resolve(true)
+				console.log(`Disconnected`)
+			});
+		} catch (error) {
+			reject(error)
+		}
 	})
 }
 async function isConnected() {
@@ -78,14 +82,14 @@ async function getData(sql) {
 	try {
 		console.log(`Data requested`);
 		return new Promise(async function (resolve, reject) {
-			con.query(sql
+			await con.query(sql
 				, async function (err, result) {
-					if (err) await reject(err)
-					await resolve(result);
+					if (err) reject(err);
+					resolve(result);
 				})
 		})
 	} catch (err) {
-		
+
 	}
 }
 

@@ -3,55 +3,19 @@ var express = require("express");
 var app = express();
 const bodyParser = require("body-parser");
 const bcrypt = require('bcrypt-nodejs')
-const { EventEmitter } = require('events');
+
+const performance = require("./performance.js")
 
 
 
-//LOGGING PERFORMANCE
 
-function wrap(fn) {
-	// Function takes 2 arguments
-	if (fn.length === 2) {
-		return function (req, res) {
-			const start = Date.now();
-			res.once('finish', () => profiles.emit('middleware', {
-				req,
-				name: fn.name,
-				elapsedMS: Date.now() - start
-			}));
-			return fn.apply(this, arguments);
-		};
-	} else if (fn.length === 3) {
-		return function (req, res, next) {
-			const start = Date.now();
-			fn.call(this, req, res, function () {
-				profiles.emit('middleware', {
-					req,
-					name: fn.name,
-					elapsedMS: Date.now() - start
-				});
 
-				next.apply(this, arguments);
-			});
-		};
-	} else {
-		throw new Error('Function must take 2 or 3 arguments');
-	}
-}
 
-app.use(wrap(function (req, res, next) {
+app.use(performance.wrap(function (req, res, next) {
 	next();
 }));
 
-const profiles = new EventEmitter();
 
-profiles.on('route', ({ req, elapsedMS }) => {
-	console.log(req.method, req.url, `${elapsedMS}ms`);
-});
-
-profiles.on('middleware', ({ req, name, elapsedMS }) => {
-	console.log(req.method, req.url, ':', name, `${elapsedMS}ms`);
-});
 
 
 //END LOGGING PERFORMANCE
@@ -77,6 +41,9 @@ app.use("/css", express.static(__dirname + "/css"));
 
 app.use(express.static(__dirname + '/views'));
 
+
+app.use('/api/discord', require('./api/discord'));
+
 app.use(bodyParser.urlencoded({
 	extended: true
 }));
@@ -86,13 +53,45 @@ app.use(cookieParser())
 app.engine('html', engine.mustache);
 app.set('view engine', 'html');
 app.use(allowCrossDomain);
-app.route('/')
-	.get(function (req, res) {
-		navigator.CheckLogin(req, res, 'Dashboard')
+
+
+
+/*
+*
+------GET-----
+*
+*/
+
+app.get('/', async function (req, res) {
+	navigator.CheckLogin(req, res, 'dashboard')
+})
+
+app.get('/dashboard', async function (req, res) {
+
+	//res.render("dashboard")
+	navigator.CheckLogin(req, res, 'dashboard')
+})
+
+app.get('/login', async function (req, res) {
+	navigator.CheckLogin(req, res, 'dashboard')
+})
+
+app.get("/getUserInfo", async function (req, res) {
+	User.GetUserInfo(req.query.id).then(u => {
+		res.status(200).send(u);
 	})
-	.post(async function (req, res) {
-		res.send('POST hello world')
-	})
+})
+
+
+
+/*
+*
+------POST-----
+*
+*/
+app.post('/login', async function (req, res) {
+	User.Login(req, res);
+})
 
 app.post('/new_user', async function (req, res) {
 	User.Register(req, res);
@@ -100,15 +99,49 @@ app.post('/new_user', async function (req, res) {
 
 
 
-app.post('/login', async function (req, res) {
-	User.Login(req, res);
-})
+/*
+*
+------ROUTE-----
+*
+*/
+app.route("/logout")
+	.all(function (req, res) {
+		User.Logout(req, res);
+	})
+
+/* app.route('*')
+	.get(function (req, res) {
+		navigator.CheckLogin(req, res, req.url.substring(1))
+	})
+	.post(async function (req, res) {
+		res.send('POST hello world')
+	}) */
 
 
+
+
+
+
+
+
+
+/* 
 app.use(function (req, res, next) {
 	res.status(404).render('404_error_template', { title: "Sorry, page not found" });
-});
+}); */
 
 app.listen(3000, () => {
 	console.log("Server running on port 3000");
 });
+
+/* app.use((err, req, res, next) => {
+	switch (err.message) {
+	  case 'NoCodeProvided':
+		return res.status(400).send({
+		  status: 'ERROR',
+		  error: err.message,
+		});
+	  default:
+		return res.status(404).render('404_error_template', { title: "Sorry, page not found" });
+	}
+  }); */
